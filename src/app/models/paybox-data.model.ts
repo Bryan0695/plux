@@ -59,39 +59,72 @@ export interface PayboxData {
   onAuthorize?: (response: PayboxResponse) => void;
 }
 
-// ── Respuesta del SDK ───────────────────────────────────────────────────────
+// ── Respuesta del SDK (campos reales devueltos por PagoPlux onAuthorize) ────
 export interface PayboxResponse {
-  status: 'succeeded' | 'failed';
-  amount?: number;
-  amountAuthorized?: number;
-  amountWTaxes?: string;
-  amountWoTaxes?: string;
-  acquirer?: string;
-  cardInfo?: string;
-  cardIssuer?: string;
-  cardType?: string;
-  clientID?: string;
-  clientName?: string;
-  deferred?: number;
+  // Identificadores
+  token?:          string;   // token de autorización (indica éxito cuando existe)
+  transaccion_id?: string;   // UUID de la transacción
+  id_transaccion?: string;   // alias alternativo
+
+  // Tarjeta
+  card?:     string;   // número enmascarado  "XXXX XXXX XXXX 8783"
+  scheme?:   string;   // marca: "VISA", "MASTERCARD", etc.
+  cardType?: string;   // "credit" | "debit"
+  cbn?:      string;   // BIN de la tarjeta
+
+  // Montos
+  formatedAmount?:    string;   // "10.20"
+  base0?:             number;   // subtotal sin IVA
+  base12?:            number;   // subtotal con IVA
+  discountPercentage?: number | null;
+
+  // Titular / cliente
+  sendname?:   string;   // nombre del titular
+  sendmail?:   string;   // correo del cliente
+  cardphone?:  string;   // teléfono registrado
+  codTipoId?:  string;   // código tipo de identificación
+  valTipoId?:  string;   // valor del tipo ("CC", "CI", etc.)
+  cardid?:     string;   // hash de la cédula
+
+  // Adquirente / comercio
+  adquiriente?: string;   // banco adquirente "GUAYAQUIL"
+  remail?:      string;   // email del comercio
+  rename?:      string;   // nombre del comercio
+
+  // Diferidos
+  cuotas?:   number;   // número de cuotas (0 = corriente)
+  pmtdn?:    number;
+  pmttds?:   number;
+
+  // Descripción
   description?: string;
-  direction?: string;
-  discountRate?: number | null;
-  email?: string;
-  extras?: string;
-  fecha?: string;
-  fullname?: string;
-  id_transaccion?: string;
-  interests?: string;
-  interestValue?: number;
-  mid?: string;
-  paymentType?: string;
-  phone?: string;
-  state?: string;
-  taxesValue?: string;
-  tid?: string;
-  tipoPago?: string;
-  token?: string;
+
+  // 3DS
+  id3DS?:        string;
+  threeDSecure?: Record<string, unknown>;
+
+  // Código de error (solo en rechazos con intento real de cobro)
   code?: number;
+
+  // Campos legacy / alternativos que algunas versiones del SDK devuelven
+  status?:      'succeeded' | 'failed';
+  amount?:      number;
+  cardInfo?:    string;
+  cardIssuer?:  string;
+  clientName?:  string;
+  clientID?:    string;
+  fecha?:       string;
+  state?:       string;
+  acquirer?:    string;
+  deferred?:    number;
+  interests?:   string;
+  interestValue?: number;
+  amountWTaxes?:  string;
+  amountWoTaxes?: string;
+  tipoPago?:    string;
+  paymentType?: string;
+  mid?:         string;
+  tid?:         string;
 }
 
 // ── Respuesta de la API de validación ──────────────────────────────────────
@@ -101,9 +134,37 @@ export interface ValidationRequest {
   token: string;
 }
 
+export interface ValidationDetail {
+  id_transaccion:   string;
+  token:            string;
+  amount:           number;
+  amountAuthorized: number;
+  amountWoTaxes:    string;
+  amountWTaxes:     string;
+  taxesValue:       string;
+  discountRate:     number | null;
+  interestValue:    number;
+  interests:        string;
+  deferred:         number;
+  cardInfo:         string;
+  cardIssuer:       string;
+  cardType:         string;
+  clientID:         string;
+  clientName:       string;
+  clientPhone:      string;
+  clientDirection:  string;
+  fecha:            string;
+  state:            string;
+  description:      string;
+  extras:           string;
+  acquirer:         string;
+  mid:              string;
+  tid:              string;
+}
+
 export interface ValidationResponse {
-  code: number;
+  code:        number;
   description: string;
-  detail: Record<string, unknown>;
-  status: 'succeeded' | 'failed';
+  detail:      ValidationDetail;
+  status:      'succeeded' | 'failed';
 }
