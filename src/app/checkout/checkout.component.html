@@ -1,0 +1,309 @@
+<main>
+  <section class="checkout-panel">
+    <div class="checkout-card">
+
+      <div class="checkout-title">
+        <div class="checkout-title-icon">🛒</div>
+        Resumen de pedido
+      </div>
+
+      <!-- Desglose de precios -->
+      <div class="price-breakdown">
+        <div class="price-row">
+          <span class="label">Subtotal (sin IVA)</span>
+          <span class="value">$9.02</span>
+        </div>
+        <div class="price-row">
+          <span class="label">IVA (15%)</span>
+          <span class="value">$1.18</span>
+        </div>
+        <div class="price-row total">
+          <span>Total a pagar</span>
+          <span>$10.20</span>
+        </div>
+      </div>
+
+      <!-- Datos del comprador -->
+      <form [formGroup]="buyerForm" class="buyer-info" autocomplete="off">
+        <div class="input-group">
+          <label for="buyerName">Nombre completo</label>
+          <input id="buyerName" type="text" formControlName="name" placeholder="Juan Pérez" />
+        </div>
+        <div class="input-group">
+          <label for="buyerEmail">Correo electrónico</label>
+          <input id="buyerEmail" type="email" formControlName="email" placeholder="juan@ejemplo.com" />
+        </div>
+        <div class="input-group">
+          <label for="buyerPhone">Teléfono</label>
+          <input id="buyerPhone" type="text" formControlName="phone" placeholder="0991234567" />
+        </div>
+        <div class="input-group">
+          <label for="buyerAddress">Dirección</label>
+          <input id="buyerAddress" type="text" formControlName="address" placeholder="Av. Amazonas 123, Quito" />
+        </div>
+      </form>
+
+      <!--
+        SDK PagoPlux Angular:
+          - <div id="modalPaybox"> → contenedor del iframe del SDK
+          - <button id="pay">      → el SDK inyecta su imagen/estilo aquí
+      -->
+      <div id="modalPaybox"></div>
+      <button id="pay" type="button" style="display:none">Pagar Ahora</button>
+
+      <!-- Botón fallback: visible solo si el SDK no cargó — estilo PagoPlux -->
+      <button
+        class="fallback-pay-btn"
+        type="button"
+        (click)="openPaybox()"
+      >
+        <div class="ppx-btn-main">
+          <svg style="width:22px;height:22px;flex-shrink:0" viewBox="0 0 40 40" fill="none">
+            <circle cx="20" cy="20" r="18" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+            <path d="M9 19 C11 13,17 9,22 9 C27 9,33 13,33 19" stroke="white" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+            <circle cx="10" cy="20" r="2.5" fill="white"/>
+            <circle cx="31" cy="20" r="2.5" fill="white"/>
+            <path d="M13 21 L18 26 L28 15" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          Pagar ahora
+        </div>
+        <div class="ppx-cards-bar">
+          <div class="ppx-card-logo"><span class="logo-visa">VISA</span></div>
+          <div class="ppx-card-logo">
+            <div class="logo-mc">
+              <div class="mc-c mc-l"></div>
+              <div class="mc-c mc-r"></div>
+              <div style="position:absolute;left:10px;width:12px;height:18px;background:#ff5f00;opacity:.85;clip-path:ellipse(45% 50% at 50% 50%);"></div>
+            </div>
+          </div>
+          <div class="ppx-card-logo"><div class="logo-amex">AMERICAN<br>EXPRESS</div></div>
+          <div class="ppx-card-logo">
+            <div class="logo-diners">
+              <div class="diners-circle"><div class="diners-line"></div></div>
+              <div class="diners-txt">Diners<br>Club</div>
+            </div>
+          </div>
+          <div class="ppx-card-logo">
+            <div class="logo-discover">
+              <span class="disc-txt">DISCOVER</span>
+              <div class="disc-dot"></div>
+            </div>
+          </div>
+        </div>
+      </button>
+
+    </div>
+  </section>
+</main>
+
+<!-- ═══════════════════════════════════
+     SIMULADOR PAYBOX (fallback)
+     Fiel al widget real de PagoPlux.
+═══════════════════════════════════ -->
+<div
+  class="paybox-overlay"
+  [class.show]="payboxOverlayOpen"
+  (click)="closePaybox()"
+>
+  <div class="paybox-widget" (click)="$event.stopPropagation()">
+    <button class="pb-close" type="button" (click)="closePaybox()">×</button>
+
+    <div class="pb-hdr">
+      <span class="pb-logo">Plux</span>
+      <span class="pb-store">Pruebas</span>
+    </div>
+
+    <div class="pb-tabs">
+      <div class="pb-tab active"><span class="pb-tab-ico">💳</span><span>Tarjeta</span></div>
+      <div class="pb-tab" style="opacity:.35;pointer-events:none"><span class="pb-tab-ico">💵</span><span>Efectivo</span></div>
+      <div class="pb-tab" style="opacity:.35;pointer-events:none"><span class="pb-tab-ico">🏦</span><span>Billetera</span></div>
+      <div class="pb-tab" style="opacity:.35;pointer-events:none"><span class="pb-tab-ico">🔄</span><span>Transferencia</span></div>
+    </div>
+
+    <!-- Formulario de tarjeta -->
+    <div class="pb-body" [style.display]="processingPayment ? 'none' : 'block'">
+
+      <!-- Ilustración de tarjeta -->
+      <div class="pb-card-illustration">
+        <div class="pb-card-inner">
+          <div class="pb-card-chip"></div>
+          <div class="pb-card-stripe pb-card-stripe-1"></div>
+          <div class="pb-card-stripe pb-card-stripe-2"></div>
+          <div class="pb-card-glow"></div>
+        </div>
+      </div>
+
+      <div class="pb-section-title">Pago con Tarjeta de Crédito / Débito</div>
+      <div class="pb-show-widget-badge">SHOW WIDGET</div>
+
+      <div class="pb-row3">
+        <div class="pb-f" style="grid-column:1/3">
+          <label>Número de tarjeta</label>
+          <input
+            type="text" placeholder="Ej: 4545XXXX0000" maxlength="19" autocomplete="off"
+            [ngModel]="pbNum"
+            (ngModelChange)="pbNum = formatCard($event)"
+            [class.pb-input-err]="pbErrors['pbNum']"
+          />
+          <small class="pb-err" *ngIf="pbErrors['pbNum']">{{ pbErrors['pbNum'] }}</small>
+        </div>
+        <div class="pb-f">
+          <label>Vencimiento</label>
+          <input
+            type="text" placeholder="MM/YY" maxlength="5"
+            [ngModel]="pbExp"
+            (ngModelChange)="pbExp = formatExp($event)"
+            [class.pb-input-err]="pbErrors['pbExp']"
+          />
+          <small class="pb-err" *ngIf="pbErrors['pbExp']">{{ pbErrors['pbExp'] }}</small>
+        </div>
+        <div class="pb-f">
+          <label>Código CVV <span style="color:#bbb;font-size:.62rem">ℹ️</span></label>
+          <input
+            type="password" placeholder="CVV" maxlength="4"
+            [(ngModel)]="pbCvv"
+            [class.pb-input-err]="pbErrors['pbCvv']"
+          />
+          <small class="pb-err" *ngIf="pbErrors['pbCvv']">{{ pbErrors['pbCvv'] }}</small>
+        </div>
+      </div>
+
+      <div class="pb-row2">
+        <div class="pb-f">
+          <label>Tipo Doc.</label>
+          <select [(ngModel)]="pbDocType">
+            <option value="RUC">RUC</option>
+            <option value="CED">CED</option>
+            <option value="PAS">PAS</option>
+          </select>
+        </div>
+        <div class="pb-f">
+          <label style="font-size:.62rem;color:#888;">
+            Cédula <span style="color:#f4606a">*10 dígitos</span>
+          </label>
+          <input
+            type="text"
+            placeholder="1710034065"
+            maxlength="10"
+            inputmode="numeric"
+            [(ngModel)]="pbDoc"
+            (ngModelChange)="pbDoc = filterDigits($event)"
+            [class.pb-input-err]="pbErrors['pbDoc']"
+          />
+          <small class="pb-err" *ngIf="pbErrors['pbDoc']">{{ pbErrors['pbDoc'] }}</small>
+          <small class="pb-hint" *ngIf="!pbErrors['pbDoc'] && pbDoc.length > 0 && pbDoc.length < 10">
+            {{ pbDoc.length }}/10 dígitos
+          </small>
+        </div>
+      </div>
+
+      <div class="pb-f">
+        <label>👤 Nombre de la persona</label>
+        <input
+          type="text" placeholder="Monica Sanchez"
+          [(ngModel)]="pbName"
+          [class.pb-input-err]="pbErrors['pbName']"
+        />
+        <small class="pb-err" *ngIf="pbErrors['pbName']">{{ pbErrors['pbName'] }}</small>
+      </div>
+
+      <div class="pb-f">
+        <label>Forma de pago</label>
+        <select [(ngModel)]="pbCuotas">
+          <option value="corriente">Corriente</option>
+          <option value="3">3 meses sin intereses</option>
+          <option value="6">6 meses sin intereses</option>
+          <option value="12">12 meses sin intereses</option>
+        </select>
+      </div>
+
+      <div class="pb-amt-lbl">Valor a pagar</div>
+      <div class="pb-amt-val">$ 10.20</div>
+
+      <button class="pb-btn" type="button" (click)="procesarPago()">
+        <svg style="width:18px;height:18px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="5" width="20" height="14" rx="2" stroke="white" stroke-width="1.8" fill="none"/>
+          <path d="M2 9h20" stroke="white" stroke-width="1.8"/>
+          <rect x="5" y="13" width="4" height="2" rx="0.5" fill="white"/>
+        </svg>
+        Completar Pago
+      </button>
+
+      <div class="pb-links">
+        <a href="#">Términos y Condiciones</a>
+        <span style="color:#ddd">|</span>
+        <a href="#">Preguntas Frecuentes</a>
+      </div>
+    </div>
+
+    <!-- Estado procesando -->
+    <div class="pb-proc" [class.show]="processingPayment">
+      <div class="pb-spin"></div>
+      <div class="pb-proc-txt">Procesando pago…</div>
+    </div>
+
+    <div class="pb-foot">
+      <span class="pb-badge pci">PCI</span>
+      <span class="pb-sep">|</span>
+      <span class="pb-badge ssl">3D<br>SECURE</span>
+      <span class="pb-sep">|</span>
+      <span style="font-size:.62rem;color:#aaa;font-style:italic">✦ pagoplux</span>
+      <span class="pb-sep">|</span>
+      <span class="pb-badge corp">CORPORACIÓN<br>FAVORITA</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════
+     MODAL RESULTADO
+═══════════════════════════════════ -->
+<div
+  class="result-overlay"
+  [class.show]="resultModalOpen"
+  (click)="closeResult()"
+>
+  <div class="result-modal" (click)="$event.stopPropagation()" *ngIf="paymentResult">
+
+    <div class="r-icon" [ngClass]="paymentResult.status === 'succeeded' ? 'ok' : 'err'">
+      {{ paymentResult.status === 'succeeded' ? '✅' : '❌' }}
+    </div>
+
+    <div class="r-title" [ngClass]="paymentResult.status === 'succeeded' ? 'ok' : 'err'">
+      {{ paymentResult.status === 'succeeded' ? '¡Pago exitoso!' : 'Pago rechazado' }}
+    </div>
+
+    <p class="r-sub">
+      <ng-container *ngIf="paymentResult.status === 'succeeded'">
+        Tu compra fue procesada correctamente. Recibirás un correo con los detalles de acceso a tu curso.
+      </ng-container>
+      <ng-container *ngIf="paymentResult.status !== 'succeeded'">
+        No se pudo procesar el pago. Verifica los datos de tu tarjeta o utiliza una tarjeta diferente.
+      </ng-container>
+    </p>
+
+    <div class="r-details" *ngIf="paymentResult.status === 'succeeded'">
+      <div class="dr"><span class="k">Estado</span>        <span class="v ok">{{ paymentResult.state || 'PAGADO' }}</span></div>
+      <div class="dr"><span class="k">Token</span>         <span class="v">{{ paymentResult.token }}</span></div>
+      <div class="dr"><span class="k">ID Transacción</span><span class="v">{{ (paymentResult.id_transaccion || '').slice(0,26) }}</span></div>
+      <div class="dr"><span class="k">Monto total</span>   <span class="v">$ {{ paymentResult.amount }}</span></div>
+      <div class="dr"><span class="k">Tarjeta</span>       <span class="v">{{ paymentResult.cardIssuer }} · {{ paymentResult.cardType }}</span></div>
+      <div class="dr"><span class="k">Número</span>        <span class="v">{{ paymentResult.cardInfo }}</span></div>
+      <div class="dr"><span class="k">Titular</span>       <span class="v">{{ paymentResult.clientName }}</span></div>
+      <div class="dr"><span class="k">Fecha</span>         <span class="v">{{ paymentResult.fecha }}</span></div>
+    </div>
+
+    <div class="r-details" *ngIf="paymentResult.status !== 'succeeded'">
+      <div class="dr"><span class="k">Estado</span>  <span class="v err">RECHAZADO</span></div>
+      <div class="dr"><span class="k">Motivo</span>  <span class="v">{{ paymentResult.description }}</span></div>
+      <div class="dr"><span class="k">Código</span>  <span class="v">{{ paymentResult.code }}</span></div>
+      <div class="dr"><span class="k">Tarjeta</span> <span class="v">{{ paymentResult.cardIssuer }}</span></div>
+      <div class="dr"><span class="k">Número</span>  <span class="v">{{ paymentResult.cardInfo }}</span></div>
+      <div class="dr"><span class="k">Fecha</span>   <span class="v">{{ paymentResult.fecha }}</span></div>
+    </div>
+
+    <button class="r-close" type="button" (click)="closeResult()">
+      Cerrar y volver al inicio
+    </button>
+
+  </div>
+</div>
